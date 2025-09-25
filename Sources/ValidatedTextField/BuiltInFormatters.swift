@@ -54,22 +54,22 @@ public struct PhoneFormatter: InputFormatter {
   }
   
   private func formatResult(_ digits: [Character], cursorDigitIndex: Int) -> FormattingResult {
-    // 重新格式化所有剩余数字
+    // Reformat all remaining digits
     var formatted = ""
     for (i, digit) in digits.enumerated() {
       if i == 3 || i == 7 { formatted += " " }
       formatted.append(digit)
     }
-    
-    // 光标位置：第cursorDigitIndex个数字前
+
+    // Cursor position: before the cursorDigitIndex-th digit
     var cursorPos = cursorDigitIndex
     if cursorDigitIndex > 3 { cursorPos += 1 }
     if cursorDigitIndex > 7 { cursorPos += 1 }
-    
+
     return FormattingResult(formattedText: formatted, cursorPosition: min(cursorPos, formatted.count))
   }
-  
-  // MARK: - InputFormatter 协议
+
+  // MARK: - InputFormatter Protocol
   public func shouldAllowCharacter(_ character: Character, at position: Int, in text: String) -> Bool {
     character.isNumber
   }

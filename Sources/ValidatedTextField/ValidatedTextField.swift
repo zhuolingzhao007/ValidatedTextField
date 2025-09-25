@@ -12,9 +12,9 @@ public final class ValidatedTextField: UIView {
 
     // MARK: - Cursor Position
     public enum CursorPosition {
-        case `default`  // 默认（文本末尾）
-        case start  // 文本开头
-        case end  // 文本末尾（同默认，但明确）
+        case `default`  // Default (end of text)
+        case start  // Start of text
+        case end  // End of text (same as default, but explicit)
     }
 
     // MARK: - Layout Constants
@@ -84,12 +84,12 @@ public final class ValidatedTextField: UIView {
         let patch = styleEngine.resolve(for: iState, vState.phase)
         let spacing = patch.accessorySpacing ?? Layout.accessorySpacing
 
-        // 计算leading视图宽度
+        // Calculate leading view width
         let visibleLeadingViews = leadingViews.filter { !$0.isHidden }
         let leadingWidth: CGFloat = calculateViewsWidth(
             views: visibleLeadingViews, spacing: spacing)
 
-        // 计算trailing视图宽度
+        // Calculate trailing view width
         let visibleTrailingViews = trailingViews.filter { !$0.isHidden }
         let trailingWidth = calculateViewsWidth(views: visibleTrailingViews, spacing: spacing)
 
@@ -391,8 +391,8 @@ extension ValidatedTextField {
 
 // MARK: - Accessory Layout Handling
 extension ValidatedTextField: AccessoryContainer {
-    /// 当 accessory 需要通知容器重新布局时调用
-    /// - Note: 这个方法供 AccessoryPlugin 的扩展实现调用
+    /// Called when accessory needs to notify container to relayout
+    /// - Note: This method is called by AccessoryPlugin extension implementation
     public func invalidateAccessoryLayout() {
         setNeedsLayout()
         layoutIfNeeded()
@@ -476,7 +476,7 @@ extension ValidatedTextField: UITextFieldDelegate {
 
             processValidation(triggeredByChange: true)
 
-            // 实时更新 accessory（如 ClearButton），覆盖编辑变化时机
+            // Real-time update accessory (e.g. ClearButton), override editing change timing
             self.broadcast()
 
             return false
@@ -486,7 +486,7 @@ extension ValidatedTextField: UITextFieldDelegate {
             self.processValidation(triggeredByChange: true)
         }
 
-        // 实时更新 accessory（如 ClearButton），覆盖编辑变化时机
+        // Real-time update accessory (e.g. ClearButton), override editing change timing
         self.broadcast()
 
         return true
@@ -500,7 +500,7 @@ extension ValidatedTextField: UITextFieldDelegate {
     public func textFieldDidChangeSelection(_ textField: UITextField) {
         switch self.cursorPosition {
         case .default:
-            // 默认末尾，无需设置
+            // Default to end, no need to set
             break
         case .end:
             if let endPostion = self.textField.position(

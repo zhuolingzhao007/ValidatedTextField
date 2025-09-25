@@ -31,8 +31,8 @@ public protocol AccessoryPlugin: AnyObject {
   func bind(text: TextProxy)
   func apply(interaction: InteractionState, validation: ValidationState)
 
-  /// 当 accessory 需要通知容器重新布局时调用
-  /// - Note: 默认实现为空，具体实现由容器提供
+  /// Called when accessory needs to notify container to relayout
+  /// - Note: Default implementation is empty, specific implementation provided by container
   func invalidateContainerLayout()
 }
 
@@ -41,7 +41,7 @@ extension AccessoryPlugin {
   public func bind(text: TextProxy) {}
   public func apply(interaction: InteractionState, validation: ValidationState) {}
   public func invalidateContainerLayout() {
-    // 默认实现：通过 superview 向上查找 AccessoryContainer
+    // Default implementation: search upwards through superview for AccessoryContainer
     var superview = view.superview
     while superview != nil {
       if let container = superview as? AccessoryContainer {
@@ -54,7 +54,7 @@ extension AccessoryPlugin {
 }
 
 // MARK: - Container Protocol
-/// 提供给 accessory 用来通知容器重新布局的协议
+/// Protocol provided to accessory for notifying container to relayout
 public protocol AccessoryContainer: AnyObject {
   func invalidateAccessoryLayout()
 }

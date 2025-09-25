@@ -34,7 +34,7 @@ public protocol InputValidator {
   func validate(_ raw: String) -> ValidationResult
 }
 
-// 组合型 Validator（支持 && || ! 和 Builder）
+// Combinatorial Validator (supports && || ! and Builder)
 public struct Validator: InputValidator {
   private let impl: (String) -> ValidationResult
 
@@ -73,7 +73,7 @@ public prefix func ! (v: Validator) -> Validator {
   .init { input in
     let result = v.validate(input)
     switch result {
-    case .valid: return .invalid(message: "验证应该失败")
+    case .valid: return .invalid(message: "Validation should fail")
     case .invalid: return .valid
     }
   }

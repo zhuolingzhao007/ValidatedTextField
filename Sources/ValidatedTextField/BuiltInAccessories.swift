@@ -71,7 +71,7 @@ public final class LabelAccessory: AccessoryPlugin {
     let containerView = UIView()
     containerView.addSubview(label)
 
-    // 使用 frame 布局
+    // Use frame layout
     label.frame = CGRect(
       x: 0, y: (36 - label.frame.height) / 2, width: label.frame.width, height: label.frame.height)
     containerView.frame = CGRect(x: 0, y: 0, width: label.frame.width + 8, height: 36)  // padding 0- 8
@@ -81,7 +81,7 @@ public final class LabelAccessory: AccessoryPlugin {
   }
 
   public func bind(text: TextProxy) {
-    // 固定文本，无需绑定
+    // Fixed text, no need to bind
   }
 
   public func apply(interaction: InteractionState, validation: ValidationState) {
@@ -99,7 +99,7 @@ public final class CustomViewAccessory: AccessoryPlugin {
   private let customView: UIView
   private var boundsObservation: NSKeyValueObservation?
 
-  /// 初始化自定义视图 accessory
+  /// Initialize custom view accessory
   public init(
     customView: UIView,
     placement: AccessoryPlacement = .trailing,
@@ -111,7 +111,7 @@ public final class CustomViewAccessory: AccessoryPlugin {
 
     self.view = customView
     self.view.isHidden = false
-    
+
     setupBoundsObservation()
   }
 
@@ -134,14 +134,14 @@ public final class CustomViewAccessory: AccessoryPlugin {
     invalidateContainerLayout()
   }
 
-  /// 更新视图的宽度
+  /// Update view width
   public func updateWidth(_ width: CGFloat) {
     customView.frame = CGRect(x: 0, y: 0, width: width, height: customView.frame.height)
     customView.layoutIfNeeded()
     invalidateContainerLayout()
   }
 
-  /// 更新视图的尺寸
+  /// Update view size
   public func updateSize(width: CGFloat, height: CGFloat? = nil) {
     let newHeight = height ?? customView.frame.height
     customView.frame = CGRect(x: 0, y: 0, width: width, height: newHeight)
@@ -149,12 +149,12 @@ public final class CustomViewAccessory: AccessoryPlugin {
     invalidateContainerLayout()
   }
 
-  /// 获取当前视图的宽度
+  /// Get current view width
   public var currentWidth: CGFloat {
     return customView.frame.width
   }
 
-  /// 获取当前视图的高度
+  /// Get current view height
   public var currentHeight: CGFloat {
     return customView.frame.height
   }
@@ -164,12 +164,12 @@ public final class CustomViewAccessory: AccessoryPlugin {
   }
 
   public func apply(interaction: InteractionState, validation: ValidationState) {
-    // 调用状态处理闭包（如果提供）
+    // Call state handler closure (if provided)
     stateHandler?(interaction, validation)
   }
 
   deinit {
-    // 释放 KVO 观察者
+    // Release KVO observer
     boundsObservation?.invalidate()
     boundsObservation = nil
   }
