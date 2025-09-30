@@ -6,16 +6,21 @@
 //
 import UIKit
 
-// MARK: - Style Engine
+// MARK: - Style Infrastructure
 
-public struct StylePatch {
+public protocol StylePatchProtocol {
+  init()
+  func merged(with other: Self) -> Self
+}
+
+public struct StylePatch: StylePatchProtocol {
   // Layout
   public var containerPadding: CGFloat?
   public var horizontalPadding: CGFloat?
   public var accessorySpacing: CGFloat?
   public var verticalSpacing: CGFloat?
 
-  // Original properties
+  // Visual styling
   public var borderWidth: CGFloat?
   public var borderColor: UIColor?
   public var cornerRadius: CGFloat?
@@ -31,123 +36,125 @@ public struct StylePatch {
   public var textAlignment: NSTextAlignment?
 
   public init() {}
-  func merged(with other: StylePatch) -> StylePatch {
-    var r = self
-    // Layout
-    if let v = other.containerPadding { r.containerPadding = v }
-    if let v = other.horizontalPadding { r.horizontalPadding = v }
-    if let v = other.accessorySpacing { r.accessorySpacing = v }
-    if let v = other.verticalSpacing { r.verticalSpacing = v }
 
-    // Original
-    if let v = other.borderWidth { r.borderWidth = v }
-    if let v = other.borderColor { r.borderColor = v }
-    if let v = other.cornerRadius { r.cornerRadius = v }
-    if let v = other.backgroundColor { r.backgroundColor = v }
-    if let v = other.textColor { r.textColor = v }
-    if let v = other.textFont { r.textFont = v }
-    if let v = other.placeholderColor { r.placeholderColor = v }
-    if let v = other.placeholderFont { r.placeholderFont = v }
-    if let v = other.separatorColor { r.separatorColor = v }
-    if let v = other.errorColor { r.errorColor = v }
-    if let v = other.errorFont { r.errorFont = v }
-    if let v = other.keyboardType { r.keyboardType = v }
-    if let v = other.textAlignment { r.textAlignment = v }
-    return r
+  public func merged(with other: StylePatch) -> StylePatch {
+    var result = self
+
+    // Layout
+    if let value = other.containerPadding { result.containerPadding = value }
+    if let value = other.horizontalPadding { result.horizontalPadding = value }
+    if let value = other.accessorySpacing { result.accessorySpacing = value }
+    if let value = other.verticalSpacing { result.verticalSpacing = value }
+
+    // Visual styling
+    if let value = other.borderWidth { result.borderWidth = value }
+    if let value = other.borderColor { result.borderColor = value }
+    if let value = other.cornerRadius { result.cornerRadius = value }
+    if let value = other.backgroundColor { result.backgroundColor = value }
+    if let value = other.textColor { result.textColor = value }
+    if let value = other.textFont { result.textFont = value }
+    if let value = other.placeholderColor { result.placeholderColor = value }
+    if let value = other.placeholderFont { result.placeholderFont = value }
+    if let value = other.separatorColor { result.separatorColor = value }
+    if let value = other.errorColor { result.errorColor = value }
+    if let value = other.errorFont { result.errorFont = value }
+    if let value = other.keyboardType { result.keyboardType = value }
+    if let value = other.textAlignment { result.textAlignment = value }
+    return result
   }
 }
 
-public struct TextFieldStyle {
-  public var base: StylePatch = .init()
-  public var interactionVariants: [InteractionState: StylePatch] = [:]
-  public var validationVariants: [ValidationPhase: StylePatch] = [:]
-  public init() {}
+public struct ComponentStyle<Patch: StylePatchProtocol, PrimaryState: Hashable, SecondaryState: Hashable> {
+  public var base: Patch
+  public var primaryVariants: [PrimaryState: Patch]
+  public var secondaryVariants: [SecondaryState: Patch]
+
+  public init(
+    base: Patch = .init(),
+    primaryVariants: [PrimaryState: Patch] = [:],
+    secondaryVariants: [SecondaryState: Patch] = [:]
+  ) {
+    self.base = base
+    self.primaryVariants = primaryVariants
+    self.secondaryVariants = secondaryVariants
+  }
 }
 
 @dynamicMemberLookup
-public final class StyleBuilder {
-  private var base = StylePatch()
-  private var interaction: [InteractionState: StylePatch] = [:]
-  private var validation: [ValidationPhase: StylePatch] = [:]
+public final class ComponentStyleBuilder<Patch: StylePatchProtocol, PrimaryState: Hashable, SecondaryState: Hashable> {
+  private var base = Patch()
+  private var primary: [PrimaryState: Patch] = [:]
+  private var secondary: [SecondaryState: Patch] = [:]
 
   public init() {}
 
-  public subscript<T>(dynamicMember key: WritableKeyPath<StylePatch, T?>) -> (
-    (T) -> StyleBuilder
-  ) {
+  public subscript<T>(dynamicMember key: WritableKeyPath<Patch, T?>) -> ((T) -> ComponentStyleBuilder) {
     { value in
       self.base[keyPath: key] = value
       return self
     }
   }
 
-  public func onInteraction(_ s: InteractionState, _ edit: (Patch) -> Void)
-    -> StyleBuilder
-  {
-    let p = interaction[s] ?? StylePatch()
-    let patch = Patch(patch: p)
-    edit(patch)
-    interaction[s] = patch.finalPatch
+  @discardableResult
+  public func onPrimaryState(_ state: PrimaryState, _ edit: (inout Patch) -> Void) -> ComponentStyleBuilder {
+    var patch = primary[state] ?? Patch()
+    edit(&patch)
+    primary[state] = patch
     return self
   }
 
-  public func onValidation(_ v: ValidationPhase, _ edit: (Patch) -> Void)
-    -> StyleBuilder
-  {
-    let p = validation[v] ?? StylePatch()
-    let patch = Patch(patch: p)
-    edit(patch)
-    validation[v] = patch.finalPatch
+  @discardableResult
+  public func onSecondaryState(_ state: SecondaryState, _ edit: (inout Patch) -> Void) -> ComponentStyleBuilder {
+    var patch = secondary[state] ?? Patch()
+    edit(&patch)
+    secondary[state] = patch
     return self
   }
 
-  // Nested patch editor - Safe implementation with value semantics
-  public struct Patch {
-    private var currentPatch: StylePatch
-
-    init(patch: StylePatch) {
-      self.currentPatch = patch
-    }
-
-    var finalPatch: StylePatch { currentPatch }
-
-    @discardableResult
-    public func callAsFunction(_ block: (inout StylePatch) -> Void) -> Patch {
-      var newPatch = Patch(patch: currentPatch)
-      block(&newPatch.currentPatch)
-      return newPatch
-    }
-
-    public subscript<T>(dynamicMember key: WritableKeyPath<StylePatch, T?>) -> (
-      (T) -> Patch
-    ) {
-      { value in
-        var newPatch = Patch(patch: self.currentPatch)
-        newPatch.currentPatch[keyPath: key] = value
-        return newPatch
-      }
-    }
-  }
-
-  public func build() -> TextFieldStyle {
-    var t = TextFieldStyle()
-    t.base = base
-    t.interactionVariants = interaction
-    t.validationVariants = validation
-    return t
-  }
-
-}
-
-public struct StyleEngine {
-  private let style: TextFieldStyle
-  public init(style: TextFieldStyle) { self.style = style }
-
-  public func resolve(for i: InteractionState, _ v: ValidationPhase)
-    -> StylePatch
-  {
-    style.base
-      .merged(with: style.interactionVariants[i] ?? .init())
-      .merged(with: style.validationVariants[v] ?? .init())
+  public func build() -> ComponentStyle<Patch, PrimaryState, SecondaryState> {
+    ComponentStyle(base: base, primaryVariants: primary, secondaryVariants: secondary)
   }
 }
+
+public extension ComponentStyleBuilder where PrimaryState == InteractionState {
+  @discardableResult
+  func onInteraction(_ state: InteractionState, _ edit: (inout Patch) -> Void) -> ComponentStyleBuilder {
+    onPrimaryState(state, edit)
+  }
+}
+
+public extension ComponentStyleBuilder where SecondaryState == ValidationPhase {
+  @discardableResult
+  func onValidation(_ state: ValidationPhase, _ edit: (inout Patch) -> Void) -> ComponentStyleBuilder {
+    onSecondaryState(state, edit)
+  }
+}
+
+public struct StyleEngine<Patch: StylePatchProtocol, PrimaryState: Hashable, SecondaryState: Hashable> {
+  private let style: ComponentStyle<Patch, PrimaryState, SecondaryState>
+
+  public init(style: ComponentStyle<Patch, PrimaryState, SecondaryState>) {
+    self.style = style
+  }
+
+  public func resolve(for primaryState: PrimaryState, _ secondaryState: SecondaryState) -> Patch {
+    var resolved = style.base
+
+    if let primaryPatch = style.primaryVariants[primaryState] {
+      resolved = resolved.merged(with: primaryPatch)
+    }
+
+    if let secondaryPatch = style.secondaryVariants[secondaryState] {
+      resolved = resolved.merged(with: secondaryPatch)
+    }
+
+    return resolved
+  }
+}
+
+// MARK: - TextField Specialisations
+
+public typealias TextFieldStyle = ComponentStyle<StylePatch, InteractionState, ValidationPhase>
+public typealias TextFieldStyleBuilder = ComponentStyleBuilder<StylePatch, InteractionState, ValidationPhase>
+public typealias TextFieldStyleEngine = StyleEngine<StylePatch, InteractionState, ValidationPhase>
+public typealias StyleBuilder = TextFieldStyleBuilder

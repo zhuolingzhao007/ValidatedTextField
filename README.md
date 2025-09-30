@@ -85,10 +85,16 @@ textField.configureStyle { builder in
     builder
         .textColor(.black)
         .placeholderColor(.gray)
-        .borderColor(.blue, for: .editing)
-        .borderColor(.red, for: .invalid)
         .cornerRadius(8)
         .borderWidth(1)
+
+    builder.onInteraction(.editing) { patch in
+        patch.borderColor = .blue
+    }
+
+    builder.onValidation(.invalid) { patch in
+        patch.borderColor = .red
+    }
 }
 ```
 

@@ -58,9 +58,9 @@ public final class ValidatedTextField: UIView {
         }
     }
     public func configureStyle(_ block: (StyleBuilder) -> Void) {
-        let b = StyleBuilder()
-        block(b)
-        styleEngine = StyleEngine(style: b.build())
+        let builder = StyleBuilder()
+        block(builder)
+        styleEngine = TextFieldStyleEngine(style: builder.build())
         render()
     }
     public var onValidationChanged: ((ValidationState) -> Void)?
@@ -75,7 +75,7 @@ public final class ValidatedTextField: UIView {
             }
         }
     }
-    private var styleEngine: StyleEngine = .init(style: .init())
+    private var styleEngine: TextFieldStyleEngine = .init(style: TextFieldStyle())
     private var didCommitOnce = false
 
     private var previousAccessoryWidth: CGFloat = 0
