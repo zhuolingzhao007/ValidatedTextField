@@ -13,10 +13,13 @@ public struct CodeFormatter: InputFormatter {
     var digits = change.previousText.filter(\.isNumber)
     let newDigits = change.replacementString.filter(\.isNumber)
 
-    let digitsInPrefix = change.previousText.prefix(change.changeRange.location).filter(\.isNumber)
-      .count
-    let digitsInChange = change.previousText[change.changeRange].filter(\.isNumber).count
-    if let r = Range(NSRange(location: digitsInPrefix, length: digitsInChange), in: digits) {
+    let digitsInPrefix = change.previousText[..<change.changeRange.lowerBound]
+      .filter(\.isNumber).count
+    let digitsInChange = change.previousText[change.changeRange]
+      .filter(\.isNumber).count
+
+    if let r = Range(
+      NSRange(location: digitsInPrefix, length: digitsInChange), in: digits) {
       digits.replaceSubrange(r, with: newDigits)
     }
 
@@ -24,7 +27,7 @@ public struct CodeFormatter: InputFormatter {
       digits = String(digits.prefix(length))
     }
 
-    let cursorIndex = digitsInPrefix + newDigits.count
+    let cursorIndex = min(digitsInPrefix + newDigits.count, digits.count)
     return FormattingResult(formattedText: String(digits), cursorPosition: cursorIndex)
   }
 
@@ -46,3 +49,4 @@ public struct CodeFormatter: InputFormatter {
     return digits.count == length
   }
 }
+

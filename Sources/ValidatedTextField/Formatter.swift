@@ -5,6 +5,7 @@
 //  Created by zhuolingzhao on 9/14/25.
 //
 
+import Foundation
 
 // MARK: - Formatting Result
 public struct FormattingResult {
@@ -21,14 +22,14 @@ public struct FormattingResult {
 public struct TextChange {
   public let previousText: String      // Text before change
   public let newText: String          // Text after change
-  public let changeRange: NSRange     // Change range
+  public let changeRange: Range<String.Index>     // Change range
   public let replacementString: String // Replacement string
   public let cursorPosition: Int      // Current cursor position
   
   public init(
     previousText: String,
     newText: String,
-    changeRange: NSRange,
+    changeRange: Range<String.Index>,
     replacementString: String,
     cursorPosition: Int
   ) {
@@ -41,8 +42,8 @@ public struct TextChange {
   
   // Convenience properties
   public var isInsertion: Bool { !replacementString.isEmpty }
-  public var isDeletion: Bool { replacementString.isEmpty && changeRange.length > 0 }
-  public var isReplacement: Bool { !replacementString.isEmpty && changeRange.length > 0 }
+  public var isDeletion: Bool { replacementString.isEmpty && !changeRange.isEmpty }
+  public var isReplacement: Bool { !replacementString.isEmpty && !changeRange.isEmpty }
 }
 
 // MARK: - Formatting Protocol

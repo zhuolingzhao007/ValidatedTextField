@@ -100,7 +100,7 @@ public final class ValidatedTextField: UIView {
         guard !views.isEmpty else { return 0 }
 
         let totalWidth = views.reduce(0) { $0 + $1.frame.width }
-        let totalSpacing = max(0, views.count - 1).cgFloat * spacing
+        let totalSpacing = CGFloat(max(0, views.count - 1)) * spacing
         return totalWidth + totalSpacing
     }
 
@@ -344,8 +344,8 @@ extension ValidatedTextField {
             self.layer.borderColor = (patch.borderColor ?? UIColor.clear).cgColor
             self.backgroundColor = patch.backgroundColor ?? UIColor.clear
 
-            self.textField.textColor = patch.textColor ?? .Text.primary
-            self.textField.font = patch.textFont ?? .pf_regular(16)
+            self.textField.textColor = patch.textColor
+            self.textField.font = patch.textFont
 
             if let keyboardType = patch.keyboardType {
                 self.textField.keyboardType = keyboardType
@@ -447,15 +447,18 @@ extension ValidatedTextField: UITextFieldDelegate {
     ) -> Bool {
         if let formatter = strategy.formatter {
             let currentText = textField.text ?? ""
-            let nsString = NSString(string: currentText)
-            let newText = nsString.replacingCharacters(in: range, with: string)
+            guard let range = Range(range, in: currentText) else {
+                return false
+            }
+
+            let newText = currentText.replacingCharacters(in: range, with: string)
 
             let change = TextChange(
                 previousText: currentText,
                 newText: newText,
                 changeRange: range,
                 replacementString: string,
-                cursorPosition: range.location + string.count
+                cursorPosition: range.lowerBound.utf16Offset(in: currentText) + string.count
             )
 
             let result = formatter.format(change: change)

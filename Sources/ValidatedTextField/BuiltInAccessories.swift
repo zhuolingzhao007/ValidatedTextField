@@ -16,7 +16,8 @@ public final class ClearButtonAccessory: AccessoryPlugin {
   public init() {
 
     let button = UIButton()
-    let image: UIImage = .icon(.iconXSmallFilled, fontSize: 14, color: .Icon.tertiary)
+    let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 14)
+    let image = UIImage(systemName: "xmark.circle.fill", withConfiguration: symbolConfiguration)?.withTintColor(.tertiaryLabel, renderingMode: .alwaysOriginal)
     button.setImage(image, for: .normal)
 
     let containerView = UIView()

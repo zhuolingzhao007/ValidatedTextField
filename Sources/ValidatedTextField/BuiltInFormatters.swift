@@ -13,43 +13,25 @@ public struct PhoneFormatter: InputFormatter {
   public init() {}
   
   public func format(change: TextChange) -> FormattingResult {
-    // 1. Get the raw digits from the old text
     var digits = change.previousText.filter(\.isNumber)
-
-    // 2. Calculate the range of digits to be replaced
-    let digitsInPrefix = change.previousText.prefix(change.changeRange.location).filter(\.isNumber).count
-    let digitsInChangeRange = change.previousText[change.changeRange].filter(\.isNumber).count
-    let digitRange = NSRange(location: digitsInPrefix, length: digitsInChangeRange)
-
-    // 3. Get the new digits to insert
     let newDigits = change.replacementString.filter(\.isNumber)
 
-    // 4. Handle the case where a space is deleted (as per user's request)
-    if digitsInChangeRange == 0 && change.isDeletion && change.changeRange.length > 0 {
-        // Deleting spaces or other non-digits.
-        // If the user deletes a space, we delete the preceding digit.
-        if digitRange.location > 0 {
-            let rangeToDelete = NSRange(location: digitRange.location - 1, length: 1)
-            if let r = Range(rangeToDelete, in: digits) {
-                digits.removeSubrange(r)
-                // The cursor should be placed where the deleted digit was.
-                return formatResult(Array(digits), cursorDigitIndex: rangeToDelete.location)
-            }
-        }
-    }
+    let digitsInPrefix = change.previousText[..<change.changeRange.lowerBound]
+      .filter(\.isNumber).count
+    let digitsInChange = change.previousText[change.changeRange]
+      .filter(\.isNumber).count
 
-    // 5. Replace the range of old digits with the new digits
+    let digitRange = NSRange(location: digitsInPrefix, length: digitsInChange)
+
     if let r = Range(digitRange, in: digits) {
-        digits.replaceSubrange(r, with: newDigits)
+      digits.replaceSubrange(r, with: newDigits)
     }
 
-    // 6. Truncate to max length (11 digits for phone number)
     if digits.count > 11 {
-        digits = String(digits.prefix(11))
+      digits = String(digits.prefix(11))
     }
 
-    // 7. Format the final digits and calculate the new cursor position
-    let finalCursorIndex = digitRange.location + newDigits.count
+    let finalCursorIndex = digitsInPrefix + newDigits.count
     return formatResult(Array(digits), cursorDigitIndex: finalCursorIndex)
   }
   
