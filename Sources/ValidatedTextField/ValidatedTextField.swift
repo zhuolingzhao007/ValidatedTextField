@@ -166,6 +166,7 @@ extension ValidatedTextField {
 
     private func performLayout(for width: CGFloat) -> CGFloat {
         let patch = styleEngine.resolve(for: iState, vState.phase)
+
         let hPadding = patch.horizontalPadding ?? Layout.horizontalPadding
         let vSpacing = patch.verticalSpacing ?? Layout.verticalSpacing
         let accessorySpacing = patch.accessorySpacing ?? Layout.accessorySpacing
@@ -339,52 +340,8 @@ extension ValidatedTextField {
     private func render() {
         let patch = styleEngine.resolve(for: iState, vState.phase)
         UIView.animate(withDuration: 0.15) {
-            self.layer.borderWidth = patch.borderWidth ?? 0
-            self.layer.cornerRadius = patch.cornerRadius ?? Layout.cornerRadius
-            self.layer.borderColor = (patch.borderColor ?? UIColor.clear).cgColor
-            self.backgroundColor = patch.backgroundColor ?? UIColor.clear
-
-            self.textField.textColor = patch.textColor
-            self.textField.font = patch.textFont
-
-            if let keyboardType = patch.keyboardType {
-                self.textField.keyboardType = keyboardType
-            }
-
-            if let textAlignment = patch.textAlignment {
-                self.textField.textAlignment = textAlignment
-            }
-            let phText =
-                self.placeholderProvider?(self.iState, self.vState.phase) ?? self.placeholder
-
-            if let ph = phText {
-                var attrs: [NSAttributedString.Key: Any] = [:]
-                if let c = patch.placeholderColor { attrs[.foregroundColor] = c }
-                if let f = patch.placeholderFont { attrs[.font] = f }
-                if attrs.isEmpty {
-                    self.textField.placeholder = ph
-                    self.textField.attributedPlaceholder = nil
-                } else {
-                    self.textField.attributedPlaceholder = NSAttributedString(
-                        string: ph, attributes: attrs)
-                }
-            } else {
-                self.textField.placeholder = nil
-                self.textField.attributedPlaceholder = nil
-            }
-
-            self.separator.backgroundColor = patch.separatorColor ?? self.separator.backgroundColor
-
-            switch self.vState {
-            case .invalid(let msg):
-                self.errorLabel.isHidden = false
-                self.errorLabel.text = msg
-                self.errorLabel.textColor = patch.errorColor ?? UIColor.systemRed
-                self.errorLabel.font = patch.errorFont ?? .systemFont(ofSize: Layout.errorFontSize)
-            default:
-                self.errorLabel.isHidden = true
-                self.errorLabel.text = nil
-            }
+            // Apply style patch to self
+            patch.apply(to: self)
         }
     }
 }
