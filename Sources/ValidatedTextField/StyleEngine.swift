@@ -9,7 +9,9 @@ import UIKit
 // MARK: - Style Infrastructure
 
 public protocol StylePatchProtocol {
+  associatedtype Target
   init()
+  mutating func addModification(_ modification: @escaping (Target) -> Void)
   func merged(with other: Self) -> Self
 }
 
@@ -17,25 +19,27 @@ public protocol StylePatchProtocol {
 
 /// Generic patch for standard UIKit controls (UIButton, UILabel, UIView, etc.)
 /// For custom composite controls, create a custom patch instead
-public struct GenericPatch<Target>: StylePatchProtocol {
+public struct GenericPatch<T>: StylePatchProtocol {
+  public typealias Target = T
+
   // Modifications to apply
-  private var modifications: [(Target) -> Void] = []
+  private var modifications: [(T) -> Void] = []
 
   public init() {}
 
   // Add a modification
-  public mutating func addModification(_ modification: @escaping (Target) -> Void) {
+  public mutating func addModification(_ modification: @escaping (T) -> Void) {
     modifications.append(modification)
   }
 
   // Apply to target
-  public func apply(to target: Target) {
+  public func apply(to target: T) {
     modifications.forEach { $0(target) }
   }
 
   // Merge two patches
-  public func merged(with other: GenericPatch<Target>) -> GenericPatch<Target> {
-    var result = GenericPatch<Target>()
+  public func merged(with other: GenericPatch<T>) -> GenericPatch<T> {
+    var result = GenericPatch<T>()
     // Merge modifications (self first, then other)
     result.modifications = self.modifications + other.modifications
     return result
@@ -46,6 +50,8 @@ public struct GenericPatch<Target>: StylePatchProtocol {
 
 /// Custom patch for ValidatedTextField (composite control with layout properties)
 public struct TextFieldPatch: StylePatchProtocol {
+  public typealias Target = ValidatedTextField
+
   // Layout properties (specific to ValidatedTextField)
   public var containerPadding: CGFloat?
   public var horizontalPadding: CGFloat?
@@ -98,39 +104,20 @@ public struct ComponentStyle<Patch: StylePatchProtocol, PrimaryState: Hashable, 
     self.primaryVariants = primaryVariants
     self.secondaryVariants = secondaryVariants
   }
-}
 
-// MARK: - Nested Builder for Chain Syntax
+  // Resolve style for given states
+  public func resolve(for primaryState: PrimaryState, _ secondaryState: SecondaryState) -> Patch {
+    var resolved = base
 
-@dynamicMemberLookup
-public final class NestedBuilder<Target> {
-  private var modifications: [(Target) -> Void] = []
-
-  public init() {}
-
-  // For value types - need mutable copy
-  public subscript<Value>(dynamicMember keyPath: WritableKeyPath<Target, Value>) -> ((Value) -> NestedBuilder) {
-    { value in
-      self.modifications.append { target in
-        var mutableTarget = target
-        mutableTarget[keyPath: keyPath] = value
-      }
-      return self
+    if let primaryPatch = primaryVariants[primaryState] {
+      resolved = resolved.merged(with: primaryPatch)
     }
-  }
 
-  // For reference types - direct modification
-  public subscript<Value>(dynamicMember keyPath: ReferenceWritableKeyPath<Target, Value>) -> ((Value) -> NestedBuilder) where Target: AnyObject {
-    { value in
-      self.modifications.append { target in
-        target[keyPath: keyPath] = value
-      }
-      return self
+    if let secondaryPatch = secondaryVariants[secondaryState] {
+      resolved = resolved.merged(with: secondaryPatch)
     }
-  }
 
-  func apply(to target: Target) {
-    modifications.forEach { $0(target) }
+    return resolved
   }
 }
 
@@ -194,50 +181,11 @@ public final class ComponentStyleBuilder<Patch: StylePatchProtocol, PrimaryState
     }
   }
 
-  // Custom method for GenericPatch
+  // Custom method - unified for all patch types
   @discardableResult
-  public func custom<Target>(_ block: @escaping (Target) -> Void) -> ComponentStyleBuilder where Patch == GenericPatch<Target> {
+  public func custom(_ block: @escaping (Patch.Target) -> Void) -> ComponentStyleBuilder {
     var patch = self.base
     patch.addModification(block)
-    self.base = patch
-    return self
-  }
-
-  // Custom method for TextFieldPatch
-  @discardableResult
-  public func custom(_ block: @escaping (ValidatedTextField) -> Void) -> ComponentStyleBuilder where Patch == TextFieldPatch {
-    var patch = self.base
-    patch.addModification(block)
-    self.base = patch
-    return self
-  }
-
-  // Configure nested objects for GenericPatch
-  @discardableResult
-  public func configure<Target, Nested>(_ keyPath: KeyPath<Target, Nested>, _ block: (NestedBuilder<Nested>) -> Void) -> ComponentStyleBuilder where Patch == GenericPatch<Target> {
-    let nestedBuilder = NestedBuilder<Nested>()
-    block(nestedBuilder)
-
-    var patch = self.base
-    patch.addModification { target in
-      let nested = target[keyPath: keyPath]
-      nestedBuilder.apply(to: nested)
-    }
-    self.base = patch
-    return self
-  }
-
-  // Configure nested objects for TextFieldPatch
-  @discardableResult
-  public func configure<Nested>(_ keyPath: KeyPath<ValidatedTextField, Nested>, _ block: (NestedBuilder<Nested>) -> Void) -> ComponentStyleBuilder where Patch == TextFieldPatch {
-    let nestedBuilder = NestedBuilder<Nested>()
-    block(nestedBuilder)
-
-    var patch = self.base
-    patch.addModification { view in
-      let nested = view[keyPath: keyPath]
-      nestedBuilder.apply(to: nested)
-    }
     self.base = patch
     return self
   }
@@ -272,6 +220,12 @@ public final class ComponentStyleBuilder<Patch: StylePatchProtocol, PrimaryState
   }
 }
 
+// MARK: - TextField Specialisations
+
+public typealias TextFieldStyle = ComponentStyle<TextFieldPatch, InteractionState, ValidationPhase>
+public typealias TextFieldStyleBuilder = ComponentStyleBuilder<TextFieldPatch, InteractionState, ValidationPhase>
+public typealias StyleBuilder = TextFieldStyleBuilder
+
 public extension ComponentStyleBuilder where PrimaryState == InteractionState {
   @discardableResult
   func onInteraction(_ state: InteractionState, _ edit: (ComponentStyleBuilder) -> Void) -> ComponentStyleBuilder {
@@ -285,35 +239,6 @@ public extension ComponentStyleBuilder where SecondaryState == ValidationPhase {
     onSecondaryState(state, edit)
   }
 }
-
-public struct StyleEngine<Patch: StylePatchProtocol, PrimaryState: Hashable, SecondaryState: Hashable> {
-  private let style: ComponentStyle<Patch, PrimaryState, SecondaryState>
-
-  public init(style: ComponentStyle<Patch, PrimaryState, SecondaryState>) {
-    self.style = style
-  }
-
-  public func resolve(for primaryState: PrimaryState, _ secondaryState: SecondaryState) -> Patch {
-    var resolved = style.base
-
-    if let primaryPatch = style.primaryVariants[primaryState] {
-      resolved = resolved.merged(with: primaryPatch)
-    }
-
-    if let secondaryPatch = style.secondaryVariants[secondaryState] {
-      resolved = resolved.merged(with: secondaryPatch)
-    }
-
-    return resolved
-  }
-}
-
-// MARK: - TextField Specialisations
-
-public typealias TextFieldStyle = ComponentStyle<TextFieldPatch, InteractionState, ValidationPhase>
-public typealias TextFieldStyleBuilder = ComponentStyleBuilder<TextFieldPatch, InteractionState, ValidationPhase>
-public typealias TextFieldStyleEngine = StyleEngine<TextFieldPatch, InteractionState, ValidationPhase>
-public typealias StyleBuilder = TextFieldStyleBuilder
 
 // MARK: - Generic UIKit Control Type Aliases
 
