@@ -51,6 +51,21 @@ public final class ComponentStyleBuilder<Patch: StylePatchProtocol, PrimaryState
     return self
   }
 
+  // Configure nested objects with NestedBuilder
+  @discardableResult
+  public func configure<NestedTarget>(_ keyPath: KeyPath<Patch.Target, NestedTarget>, _ block: (NestedBuilder<NestedTarget>) -> NestedBuilder<NestedTarget>) -> ComponentStyleBuilder where Patch.Target: AnyObject {
+    let nestedBuilder = NestedBuilder<NestedTarget>()
+    let modifiedBuilder = block(nestedBuilder)
+
+    var patch = self.base
+    patch.addModification { target in
+      let nested = target[keyPath: keyPath]
+      modifiedBuilder.apply(to: nested)
+    }
+    self.base = patch
+    return self
+  }
+
   @discardableResult
   public func onPrimaryState(_ state: PrimaryState, _ edit: (ComponentStyleBuilder) -> ComponentStyleBuilder) -> ComponentStyleBuilder {
     let builder = ComponentStyleBuilder<Patch, PrimaryState, SecondaryState>()
