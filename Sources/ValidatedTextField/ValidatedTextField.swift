@@ -342,6 +342,14 @@ extension ValidatedTextField {
         UIView.animate(withDuration: 0.15) {
             // Apply style patch to self
             patch.apply(to: self)
+            switch self.vState {
+            case .invalid(let message):
+                self.errorLabel.text = message
+                self.errorLabel.isHidden = false
+            default:
+                self.errorLabel.isHidden = true
+                self.errorLabel.text = nil
+            }
         }
     }
 }
