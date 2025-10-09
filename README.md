@@ -11,6 +11,10 @@ A powerful, customizable text field component for iOS with built-in validation, 
 - **Pure UIKit**: Zero external dependencies - built entirely with UIKit
 - **UIKit Integration**: Seamless integration with existing UIKit applications
 
+## Version
+
+Current version: 1.0.0
+
 ## Requirements
 
 - iOS 12.0+
@@ -82,18 +86,36 @@ textField.onValidationChanged = { state in
 
 ```swift
 textField.configureStyle { builder in
-    builder
-        .textColor(.black)
-        .placeholderColor(.gray)
-        .cornerRadius(8)
-        .borderWidth(1)
+    builder.backgroundColor(.white)
+    builder.custom { $0.textField.textColor = .black }
 
-    builder.onInteraction(.editing) { patch in
-        patch.borderColor = .blue
+    builder.layout { patch in
+        patch.containerPadding = 16.0
     }
 
-    builder.onValidation(.invalid) { patch in
-        patch.borderColor = .red
+    builder.onInteraction(.editing) { builder in
+        builder.custom { $0.layer.borderColor = UIColor.blue.cgColor }
+        builder.custom { $0.layer.borderWidth = 2.0 }
+    }
+
+    builder.onValidation(.invalid) { builder in
+        builder.custom { $0.layer.borderColor = UIColor.red.cgColor }
+    }
+}
+```
+
+#### Advanced: Configuring Nested Objects
+
+The Style Builder also supports configuring nested objects using `configure` with NestedBuilder:
+
+```swift
+textField.configureStyle { builder in
+    // Configure the main view
+    builder.backgroundColor(.white)
+
+    // Configure nested textField using NestedBuilder
+    builder.configure(\ValidatedTextField.textField) { nested in
+        nested.textColor(.black).font(.systemFont(ofSize: 16))
     }
 }
 ```
@@ -107,7 +129,7 @@ textField.configureStyle { builder in
 - **InputFormatter**: Handles text formatting and cursor positioning
 - **InputValidator**: Protocol for validation logic
 - **AccessoryPlugin**: Extensible accessory view system
-- **StyleEngine**: State-based styling system
+- **Style System**: State-based styling system
 
 ### Validation System
 
