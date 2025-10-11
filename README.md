@@ -17,7 +17,7 @@ Current version: 1.0.0
 
 ## Requirements
 
-- iOS 12.0+
+- iOS 13.0+
 - Swift 5.9+
 - Xcode 14.0+
 
